@@ -11,15 +11,19 @@ import {
   Calendar,
   ExternalLink
 } from 'lucide-react';
+import { Modal } from '../components/Common/Modal';
+import { VulnerabilityForm } from '../components/Forms/VulnerabilityForm';
+import { useVulnerabilities } from '../hooks/useVulnerabilities';
 import { Vulnerability } from '../types';
-import { mockVulnerabilities } from '../data/mockData';
 import { format } from 'date-fns';
 
 export const Vulnerabilities: React.FC = () => {
-  const [vulnerabilities] = useState<Vulnerability[]>(mockVulnerabilities);
+  const { vulnerabilities, loading, createVulnerability, updateVulnerability } = useVulnerabilities();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [showModal, setShowModal] = useState(false);
+  const [editingVulnerability, setEditingVulnerability] = useState<Vulnerability | null>(null);
 
   const filteredVulnerabilities = vulnerabilities.filter(vuln => {
     const matchesSearch = vuln.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -61,6 +65,41 @@ export const Vulnerabilities: React.FC = () => {
     }
   };
 
+  const handleCreateVulnerability = async (vulnData: Partial<Vulnerability>) => {
+    try {
+      await createVulnerability({
+        ...vulnData,
+        auditId: '1', // Default audit ID for demo
+        assetId: '1'  // Default asset ID for demo
+      });
+      setShowModal(false);
+    } catch (error) {
+      console.error('Failed to create vulnerability:', error);
+    }
+  };
+
+  const handleUpdateVulnerability = async (vulnData: Partial<Vulnerability>) => {
+    if (!editingVulnerability) return;
+    
+    try {
+      await updateVulnerability(editingVulnerability.id, vulnData);
+      setEditingVulnerability(null);
+      setShowModal(false);
+    } catch (error) {
+      console.error('Failed to update vulnerability:', error);
+    }
+  };
+
+  const openCreateModal = () => {
+    setEditingVulnerability(null);
+    setShowModal(true);
+  };
+
+  const openEditModal = (vulnerability: Vulnerability) => {
+    setEditingVulnerability(vulnerability);
+    setShowModal(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -69,7 +108,10 @@ export const Vulnerabilities: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-900">Vulnerability Management</h1>
           <p className="text-slate-600">Track and remediate security vulnerabilities</p>
         </div>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors">
+        <button 
+          onClick={openCreateModal}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+        >
           <Plus className="w-4 h-4" />
           <span>Add Vulnerability</span>
         </button>
@@ -204,7 +246,10 @@ export const Vulnerabilities: React.FC = () => {
                     <button className="px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition-colors">
                       View Details
                     </button>
-                    <button className="px-3 py-1 text-sm bg-green-100 text-green-800 rounded-lg hover:bg-green-200 transition-colors">
+                    <button 
+                      onClick={() => openEditModal(vuln)}
+                      className="px-3 py-1 text-sm bg-green-100 text-green-800 rounded-lg hover:bg-green-200 transition-colors"
+                    >
                       Update Status
                     </button>
                   </div>
@@ -221,6 +266,27 @@ export const Vulnerabilities: React.FC = () => {
           <p className="text-slate-600">No vulnerabilities found matching your criteria</p>
         </div>
       )}
+
+      {/* Vulnerability Form Modal */}
+      <Modal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false);
+          setEditingVulnerability(null);
+        }}
+        title={editingVulnerability ? 'Edit Vulnerability' : 'Add New Vulnerability'}
+        size="xl"
+      >
+        <VulnerabilityForm
+          vulnerability={editingVulnerability || undefined}
+          onSubmit={editingVulnerability ? handleUpdateVulnerability : handleCreateVulnerability}
+          onCancel={() => {
+            setShowModal(false);
+            setEditingVulnerability(null);
+          }}
+          isLoading={loading}
+        />
+      </Modal>
     </div>
   );
 };

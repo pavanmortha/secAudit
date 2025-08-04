@@ -11,13 +11,18 @@ import {
   Database,
   Monitor
 } from 'lucide-react';
+import { Modal } from '../components/Common/Modal';
+import { AssetForm } from '../components/Forms/AssetForm';
+import { useAssets } from '../hooks/useAssets';
 import { Asset } from '../types';
-import { mockAssets } from '../data/mockData';
 
 export const Assets: React.FC = () => {
-  const [assets] = useState<Asset[]>(mockAssets);
+  const { assets, loading, createAsset, updateAsset, deleteAsset } = useAssets();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
+  const [showModal, setShowModal] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
   const filteredAssets = assets.filter(asset => {
     const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -56,6 +61,46 @@ export const Assets: React.FC = () => {
     }
   };
 
+  const handleCreateAsset = async (assetData: Partial<Asset>) => {
+    try {
+      await createAsset(assetData);
+      setShowModal(false);
+    } catch (error) {
+      console.error('Failed to create asset:', error);
+    }
+  };
+
+  const handleUpdateAsset = async (assetData: Partial<Asset>) => {
+    if (!editingAsset) return;
+    
+    try {
+      await updateAsset(editingAsset.id, assetData);
+      setEditingAsset(null);
+      setShowModal(false);
+    } catch (error) {
+      console.error('Failed to update asset:', error);
+    }
+  };
+
+  const handleDeleteAsset = async (id: string) => {
+    try {
+      await deleteAsset(id);
+      setShowDeleteConfirm(null);
+    } catch (error) {
+      console.error('Failed to delete asset:', error);
+    }
+  };
+
+  const openCreateModal = () => {
+    setEditingAsset(null);
+    setShowModal(true);
+  };
+
+  const openEditModal = (asset: Asset) => {
+    setEditingAsset(asset);
+    setShowModal(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -64,7 +109,10 @@ export const Assets: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-900">Asset Management</h1>
           <p className="text-slate-600">Manage and monitor your digital assets</p>
         </div>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors">
+        <button 
+          onClick={openCreateModal}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+        >
           <Plus className="w-4 h-4" />
           <span>Add Asset</span>
         </button>
@@ -149,10 +197,16 @@ export const Assets: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex space-x-1">
-                  <button className="p-2 hover:bg-slate-100 rounded-lg">
+                  <button 
+                    onClick={() => openEditModal(asset)}
+                    className="p-2 hover:bg-slate-100 rounded-lg"
+                  >
                     <Edit3 className="w-4 h-4 text-slate-400" />
                   </button>
-                  <button className="p-2 hover:bg-red-50 rounded-lg">
+                  <button 
+                    onClick={() => setShowDeleteConfirm(asset.id)}
+                    className="p-2 hover:bg-red-50 rounded-lg"
+                  >
                     <Trash2 className="w-4 h-4 text-red-400" />
                   </button>
                 </div>
@@ -168,6 +222,56 @@ export const Assets: React.FC = () => {
           <p className="text-slate-600">No assets found matching your criteria</p>
         </div>
       )}
+
+      {/* Asset Form Modal */}
+      <Modal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false);
+          setEditingAsset(null);
+        }}
+        title={editingAsset ? 'Edit Asset' : 'Add New Asset'}
+        size="lg"
+      >
+        <AssetForm
+          asset={editingAsset || undefined}
+          onSubmit={editingAsset ? handleUpdateAsset : handleCreateAsset}
+          onCancel={() => {
+            setShowModal(false);
+            setEditingAsset(null);
+          }}
+          isLoading={loading}
+        />
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(null)}
+        title="Delete Asset"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            Are you sure you want to delete this asset? This action cannot be undone.
+          </p>
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={() => setShowDeleteConfirm(null)}
+              className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => showDeleteConfirm && handleDeleteAsset(showDeleteConfirm)}
+              disabled={loading}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

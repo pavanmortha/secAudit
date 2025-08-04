@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { MetricCard } from '../components/Dashboard/MetricCard';
 import { VulnerabilityChart, ComplianceScoreChart } from '../components/Dashboard/ComplianceChart';
+import { RecentActivity } from '../components/Dashboard/RecentActivity';
 import { mockComplianceMetrics, mockVulnerabilities, mockAudits } from '../data/mockData';
 
 export const Dashboard: React.FC = () => {
@@ -70,6 +71,9 @@ export const Dashboard: React.FC = () => {
 
       {/* Recent Activity & Upcoming Audits */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Activity */}
+        <RecentActivity />
+
         {/* Recent Vulnerabilities */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-4">
@@ -100,7 +104,10 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Upcoming Audits */}
+      </div>
+
+      {/* Upcoming Audits */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-slate-900">Upcoming Audits</h3>
@@ -125,10 +132,9 @@ export const Dashboard: React.FC = () => {
             ))}
           </div>
         </div>
-      </div>
 
       {/* Compliance Overview */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <h3 className="text-lg font-semibold text-slate-900 mb-4">Compliance Overview</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="text-center p-4 bg-green-50 rounded-lg">
@@ -152,6 +158,7 @@ export const Dashboard: React.FC = () => {
             <p className="text-sm text-slate-600">Critical Issues</p>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

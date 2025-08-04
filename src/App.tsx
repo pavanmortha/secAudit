@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
+import { Toast } from './components/Common/Toast';
+import { useToast } from './hooks/useToast';
 import { Layout } from './components/Layout/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { Assets } from './pages/Assets';
@@ -11,6 +13,8 @@ import { Users } from './pages/Users';
 import { Settings } from './pages/Settings';
 
 function App() {
+  const { toast, hideToast } = useToast();
+
   return (
     <AuthProvider>
       <Router>
@@ -26,6 +30,12 @@ function App() {
           </Route>
         </Routes>
       </Router>
+      <Toast
+        type={toast.type}
+        message={toast.message}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+      />
     </AuthProvider>
   );
 }

@@ -10,14 +10,18 @@ import {
   FileText,
   User
 } from 'lucide-react';
+import { Modal } from '../components/Common/Modal';
+import { AuditForm } from '../components/Forms/AuditForm';
+import { useAudits } from '../hooks/useAudits';
 import { Audit } from '../types';
-import { mockAudits } from '../data/mockData';
 import { format } from 'date-fns';
 
 export const Audits: React.FC = () => {
-  const [audits] = useState<Audit[]>(mockAudits);
+  const { audits, loading, createAudit, updateAudit, deleteAudit } = useAudits();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [showModal, setShowModal] = useState(false);
+  const [editingAudit, setEditingAudit] = useState<Audit | null>(null);
 
   const filteredAudits = audits.filter(audit => {
     const matchesSearch = audit.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -56,6 +60,32 @@ export const Audits: React.FC = () => {
     }
   };
 
+  const handleCreateAudit = async (auditData: Partial<Audit>) => {
+    try {
+      await createAudit(auditData);
+      setShowModal(false);
+    } catch (error) {
+      console.error('Failed to create audit:', error);
+    }
+  };
+
+  const handleUpdateAudit = async (auditData: Partial<Audit>) => {
+    if (!editingAudit) return;
+    
+    try {
+      await updateAudit(editingAudit.id, auditData);
+      setEditingAudit(null);
+      setShowModal(false);
+    } catch (error) {
+      console.error('Failed to update audit:', error);
+    }
+  };
+
+  const openCreateModal = () => {
+    setEditingAudit(null);
+    setShowModal(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -64,7 +94,10 @@ export const Audits: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-900">Audit Management</h1>
           <p className="text-slate-600">Schedule and track security audits</p>
         </div>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors">
+        <button 
+          onClick={openCreateModal}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+        >
           <Plus className="w-4 h-4" />
           <span>Schedule Audit</span>
         </button>
@@ -177,6 +210,27 @@ export const Audits: React.FC = () => {
           <p className="text-slate-600">No audits found matching your criteria</p>
         </div>
       )}
+
+      {/* Audit Form Modal */}
+      <Modal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false);
+          setEditingAudit(null);
+        }}
+        title={editingAudit ? 'Edit Audit' : 'Schedule New Audit'}
+        size="lg"
+      >
+        <AuditForm
+          audit={editingAudit || undefined}
+          onSubmit={editingAudit ? handleUpdateAudit : handleCreateAudit}
+          onCancel={() => {
+            setShowModal(false);
+            setEditingAudit(null);
+          }}
+          isLoading={loading}
+        />
+      </Modal>
     </div>
   );
 };
