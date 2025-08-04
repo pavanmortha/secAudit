@@ -13,12 +13,45 @@ import {
 } from 'lucide-react';
 import { Modal } from '../components/Common/Modal';
 import { VulnerabilityForm } from '../components/Forms/VulnerabilityForm';
+import { VulnerabilityHeatmap } from '../components/Vulnerabilities/VulnerabilityHeatmap';
 import { useVulnerabilities } from '../hooks/useVulnerabilities';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { vulnerabilitiesApi } from '../services/api';
 import { Vulnerability } from '../types';
 import { format } from 'date-fns';
+import toast from 'react-hot-toast';
 
 export const Vulnerabilities: React.FC = () => {
-  const { vulnerabilities, loading, createVulnerability, updateVulnerability } = useVulnerabilities();
+  const queryClient = useQueryClient();
+  
+  const { data: vulnerabilities = [], isLoading: loading } = useQuery({
+    queryKey: ['vulnerabilities'],
+    queryFn: () => vulnerabilitiesApi.getAll().then(res => res.data),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: vulnerabilitiesApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vulnerabilities'] });
+      toast.success('Vulnerability created successfully');
+    },
+    onError: () => {
+      toast.error('Failed to create vulnerability');
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Vulnerability> }) =>
+      vulnerabilitiesApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vulnerabilities'] });
+      toast.success('Vulnerability updated successfully');
+    },
+    onError: () => {
+      toast.error('Failed to update vulnerability');
+    },
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -67,7 +100,7 @@ export const Vulnerabilities: React.FC = () => {
 
   const handleCreateVulnerability = async (vulnData: Partial<Vulnerability>) => {
     try {
-      await createVulnerability({
+      await createMutation.mutateAsync({
         ...vulnData,
         auditId: '1', // Default audit ID for demo
         assetId: '1'  // Default asset ID for demo
@@ -82,7 +115,10 @@ export const Vulnerabilities: React.FC = () => {
     if (!editingVulnerability) return;
     
     try {
-      await updateVulnerability(editingVulnerability.id, vulnData);
+      await updateMutation.mutateAsync({
+        id: editingVulnerability.id,
+        data: vulnData,
+      });
       setEditingVulnerability(null);
       setShowModal(false);
     } catch (error) {
@@ -116,6 +152,9 @@ export const Vulnerabilities: React.FC = () => {
           <span>Add Vulnerability</span>
         </button>
       </div>
+
+      {/* Vulnerability Heatmap */}
+      <VulnerabilityHeatmap />
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
