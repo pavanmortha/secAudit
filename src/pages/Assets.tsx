@@ -9,7 +9,7 @@ import {
   Trash2,
   Globe,
   Database,
-  Monitor
+  Monitor,
   Play
 } from 'lucide-react';
 import { Modal } from '../components/Common/Modal';
