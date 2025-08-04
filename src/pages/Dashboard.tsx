@@ -7,7 +7,8 @@ import {
   CheckCircle,
   Clock,
   TrendingUp,
-  Shield
+  Shield,
+  FileText
 } from 'lucide-react';
 import { MetricCard } from '../components/Dashboard/MetricCard';
 import { 
@@ -18,6 +19,7 @@ import {
 } from '../components/Dashboard/RealTimeCharts';
 import { RecentActivity } from '../components/Dashboard/RecentActivity';
 import { VulnerabilityHeatmap } from '../components/Vulnerabilities/VulnerabilityHeatmap';
+import { SecurityAlerts } from '../components/Dashboard/SecurityAlerts';
 import { useRealTimeMetrics, useRealTimeVulnerabilities, useRealTimeAssets, useRealTimeAudits } from '../hooks/useRealTimeData';
 
 export const Dashboard: React.FC = () => {
@@ -106,7 +108,12 @@ export const Dashboard: React.FC = () => {
         {/* Recent Activity */}
         <RecentActivity />
 
+        {/* Security Alerts */}
+        <SecurityAlerts />
+      </div>
 
+      {/* Additional Dashboard Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Compliance Overview */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h3 className="text-lg font-semibold text-slate-900 mb-4">Compliance Overview</h3>
@@ -131,6 +138,29 @@ export const Dashboard: React.FC = () => {
               <p className="text-2xl font-bold text-red-600">{metrics.criticalVulnerabilities}</p>
               <p className="text-sm text-slate-600">Critical Issues</p>
             </div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <button className="flex items-center space-x-2 p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+              <Calendar className="w-5 h-5 text-blue-600" />
+              <span className="text-sm font-medium text-blue-900">Schedule Audit</span>
+            </button>
+            <button className="flex items-center space-x-2 p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+              <Server className="w-5 h-5 text-green-600" />
+              <span className="text-sm font-medium text-green-900">Add Asset</span>
+            </button>
+            <button className="flex items-center space-x-2 p-3 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors">
+              <Bug className="w-5 h-5 text-orange-600" />
+              <span className="text-sm font-medium text-orange-900">Report Issue</span>
+            </button>
+            <button className="flex items-center space-x-2 p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+              <FileText className="w-5 h-5 text-purple-600" />
+              <span className="text-sm font-medium text-purple-900">Generate Report</span>
+            </button>
           </div>
         </div>
       </div>

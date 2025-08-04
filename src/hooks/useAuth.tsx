@@ -20,28 +20,34 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(() => {
-    // Mock user for demo - in production this would come from secure storage
-    return {
-      id: '1',
-      name: 'John Doe',
-      email: 'john.doe@company.com',
-      role: 'admin',
-      department: 'IT Security',
-      lastLogin: new Date()
-    };
+    // Check for stored user data
+    const storedUser = localStorage.getItem('user');
+    return storedUser ? JSON.parse(storedUser) : null;
   });
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Mock authentication - in production this would call your auth API
-    if (email && password) {
-      setUser({
+    // Mock authentication with demo credentials
+    const demoUsers = {
+      'admin@secaudit.com': { password: 'admin123', role: 'admin', name: 'Admin User', department: 'IT Security' },
+      'auditor@secaudit.com': { password: 'auditor123', role: 'auditor', name: 'John Auditor', department: 'Security' },
+      'auditee@secaudit.com': { password: 'auditee123', role: 'auditee', name: 'Jane Developer', department: 'Development' }
+    };
+
+    const demoUser = demoUsers[email as keyof typeof demoUsers];
+    
+    if (demoUser && demoUser.password === password) {
+      const userData = {
         id: '1',
-        name: 'John Doe',
+        name: demoUser.name,
         email: email,
-        role: 'admin',
-        department: 'IT Security',
+        role: demoUser.role as 'admin' | 'auditor' | 'auditee',
+        department: demoUser.department,
         lastLogin: new Date()
-      });
+      };
+      
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('auth_token', 'demo-token-' + Date.now());
       return true;
     }
     return false;
@@ -49,6 +55,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem('user');
+    localStorage.removeItem('auth_token');
   };
 
   const value = {

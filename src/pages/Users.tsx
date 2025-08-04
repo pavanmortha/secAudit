@@ -11,41 +11,60 @@ import {
   Mail,
   Phone
 } from 'lucide-react';
+import { Modal } from '../components/Common/Modal';
+import { UserForm } from '../components/Forms/UserForm';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { usersApi } from '../services/api';
 import { User } from '../types';
+import toast from 'react-hot-toast';
 
 export const Users: React.FC = () => {
-  const [users] = useState<User[]>([
-    {
-      id: '1',
-      name: 'John Doe',
-      email: 'john.doe@company.com',
-      role: 'admin',
-      department: 'IT Security',
-      phone: '+1-555-0123',
-      lastLogin: new Date('2024-01-20')
+  const queryClient = useQueryClient();
+  
+  const { data: users = [], isLoading: loading } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => usersApi.getAll().then(res => res.data),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: usersApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('User created successfully');
     },
-    {
-      id: '2',
-      name: 'Jane Smith',
-      email: 'jane.smith@company.com',
-      role: 'auditor',
-      department: 'Security',
-      phone: '+1-555-0124',
-      lastLogin: new Date('2024-01-19')
+    onError: () => {
+      toast.error('Failed to create user');
     },
-    {
-      id: '3',
-      name: 'Mike Johnson',
-      email: 'mike.johnson@company.com',
-      role: 'auditee',
-      department: 'Development',
-      phone: '+1-555-0125',
-      lastLogin: new Date('2024-01-18')
-    }
-  ]);
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<User> }) =>
+      usersApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('User updated successfully');
+    },
+    onError: () => {
+      toast.error('Failed to update user');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: usersApi.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('User deleted successfully');
+    },
+    onError: () => {
+      toast.error('Failed to delete user');
+    },
+  });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
+  const [showModal, setShowModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -73,6 +92,49 @@ export const Users: React.FC = () => {
     }
   };
 
+  const handleCreateUser = async (userData: Partial<User>) => {
+    try {
+      await createMutation.mutateAsync(userData);
+      setShowModal(false);
+    } catch (error) {
+      console.error('Failed to create user:', error);
+    }
+  };
+
+  const handleUpdateUser = async (userData: Partial<User>) => {
+    if (!editingUser) return;
+    
+    try {
+      await updateMutation.mutateAsync({
+        id: editingUser.id,
+        data: userData,
+      });
+      setEditingUser(null);
+      setShowModal(false);
+    } catch (error) {
+      console.error('Failed to update user:', error);
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    try {
+      await deleteMutation.mutateAsync(id);
+      setShowDeleteConfirm(null);
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+    }
+  };
+
+  const openCreateModal = () => {
+    setEditingUser(null);
+    setShowModal(true);
+  };
+
+  const openEditModal = (user: User) => {
+    setEditingUser(user);
+    setShowModal(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -81,7 +143,10 @@ export const Users: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-900">User Management</h1>
           <p className="text-slate-600">Manage system users and their permissions</p>
         </div>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors">
+        <button 
+          onClick={openCreateModal}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+        >
           <Plus className="w-4 h-4" />
           <span>Add User</span>
         </button>
@@ -169,10 +234,18 @@ export const Users: React.FC = () => {
               </div>
 
               <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-slate-200">
-                <button className="p-2 hover:bg-slate-100 rounded-lg">
+                <button 
+                  onClick={() => openEditModal(user)}
+                  className="p-2 hover:bg-slate-100 rounded-lg"
+                  title="Edit User"
+                >
                   <Edit3 className="w-4 h-4 text-slate-400" />
                 </button>
-                <button className="p-2 hover:bg-red-50 rounded-lg">
+                <button 
+                  onClick={() => setShowDeleteConfirm(user.id)}
+                  className="p-2 hover:bg-red-50 rounded-lg"
+                  title="Delete User"
+                >
                   <Trash2 className="w-4 h-4 text-red-400" />
                 </button>
               </div>
@@ -187,6 +260,56 @@ export const Users: React.FC = () => {
           <p className="text-slate-600">No users found matching your criteria</p>
         </div>
       )}
+
+      {/* User Form Modal */}
+      <Modal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false);
+          setEditingUser(null);
+        }}
+        title={editingUser ? 'Edit User' : 'Add New User'}
+        size="lg"
+      >
+        <UserForm
+          user={editingUser || undefined}
+          onSubmit={editingUser ? handleUpdateUser : handleCreateUser}
+          onCancel={() => {
+            setShowModal(false);
+            setEditingUser(null);
+          }}
+          isLoading={loading}
+        />
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(null)}
+        title="Delete User"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            Are you sure you want to delete this user? This action cannot be undone.
+          </p>
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={() => setShowDeleteConfirm(null)}
+              className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => showDeleteConfirm && handleDeleteUser(showDeleteConfirm)}
+              disabled={loading}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
