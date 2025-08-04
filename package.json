@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:full": "concurrently \"npm run dev\" \"npm run mock-server\"",
+    "dev:full": "concurrently \"npm run dev\" \"npm run mock-server\" \"npm run backend\"",
     "mock-server": "node src/mock-server/server.js",
+    "backend": "cd backend && php -S localhost:8000",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

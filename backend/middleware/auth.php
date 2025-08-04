@@ -4,11 +4,12 @@ use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
 class AuthMiddleware {
-    private $secret_key = "your-secret-key-here";
+    private $secret_key;
     private $db;
 
     public function __construct($db) {
         $this->db = $db;
+        $this->secret_key = $_ENV['JWT_SECRET'] ?? 'secaudit-pro-jwt-secret-2024';
     }
 
     public function authenticate() {
@@ -38,7 +39,7 @@ class AuthMiddleware {
             'iss' => 'secaudit-pro',
             'aud' => 'secaudit-pro-users',
             'iat' => time(),
-            'exp' => time() + (24 * 60 * 60), // 24 hours
+            'exp' => time() + ($_ENV['JWT_EXPIRY'] ?? 86400), // Default 24 hours
             'user_id' => $user_id,
             'email' => $email,
             'role' => $role

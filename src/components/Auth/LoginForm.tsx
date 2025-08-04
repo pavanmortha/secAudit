@@ -134,12 +134,13 @@ export const LoginForm: React.FC = () => {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-slate-400">
-              Demo Credentials:
+              Default Credentials:
             </p>
             <div className="mt-2 space-y-1 text-xs text-slate-500">
               <p>Admin: admin@secaudit.com / admin123</p>
               <p>Auditor: auditor@secaudit.com / auditor123</p>
               <p>Auditee: auditee@secaudit.com / auditee123</p>
+              <p className="mt-2 text-yellow-400">Run backend setup first!</p>
             </div>
           </div>
         </form>

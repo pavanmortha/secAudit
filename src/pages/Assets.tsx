@@ -15,15 +15,51 @@ import {
 import { Modal } from '../components/Common/Modal';
 import { AssetForm } from '../components/Forms/AssetForm';
 import { AssetScanProgress } from '../components/Assets/AssetScanProgress';
-import { useAssets } from '../hooks/useAssets';
 import { useQuery } from '@tanstack/react-query';
 import { assetsApi } from '../services/api';
 import { Asset } from '../types';
+import toast from 'react-hot-toast';
 
 export const Assets: React.FC = () => {
+  const queryClient = useQueryClient();
+  
   const { data: assets = [], isLoading: loading } = useQuery({
     queryKey: ['assets'],
     queryFn: () => assetsApi.getAll().then(res => res.data),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: assetsApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
+      toast.success('Asset created successfully');
+    },
+    onError: () => {
+      toast.error('Failed to create asset');
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Asset> }) =>
+      assetsApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
+      toast.success('Asset updated successfully');
+    },
+    onError: () => {
+      toast.error('Failed to update asset');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: assetsApi.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
+      toast.success('Asset deleted successfully');
+    },
+    onError: () => {
+      toast.error('Failed to delete asset');
+    },
   });
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -72,7 +108,7 @@ export const Assets: React.FC = () => {
 
   const handleCreateAsset = async (assetData: Partial<Asset>) => {
     try {
-      await assetsApi.create(assetData);
+      await createMutation.mutateAsync(assetData);
       setShowModal(false);
     } catch (error) {
       console.error('Failed to create asset:', error);
@@ -83,7 +119,10 @@ export const Assets: React.FC = () => {
     if (!editingAsset) return;
     
     try {
-      await assetsApi.update(editingAsset.id, assetData);
+      await updateMutation.mutateAsync({
+        id: editingAsset.id,
+        data: assetData,
+      });
       setEditingAsset(null);
       setShowModal(false);
     } catch (error) {
@@ -93,7 +132,7 @@ export const Assets: React.FC = () => {
 
   const handleDeleteAsset = async (id: string) => {
     try {
-      await assetsApi.delete(id);
+      await deleteMutation.mutateAsync(id);
       setShowDeleteConfirm(null);
     } catch (error) {
       console.error('Failed to delete asset:', error);

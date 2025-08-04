@@ -1,5 +1,7 @@
 import { useState, useContext, createContext, ReactNode } from 'react';
+import { authApi } from '../services/api';
 import { User } from '../types';
+import toast from 'react-hot-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -26,31 +28,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Mock authentication with demo credentials
-    const demoUsers = {
-      'admin@secaudit.com': { password: 'admin123', role: 'admin', name: 'Admin User', department: 'IT Security' },
-      'auditor@secaudit.com': { password: 'auditor123', role: 'auditor', name: 'John Auditor', department: 'Security' },
-      'auditee@secaudit.com': { password: 'auditee123', role: 'auditee', name: 'Jane Developer', department: 'Development' }
-    };
-
-    const demoUser = demoUsers[email as keyof typeof demoUsers];
-    
-    if (demoUser && demoUser.password === password) {
-      const userData = {
-        id: '1',
-        name: demoUser.name,
-        email: email,
-        role: demoUser.role as 'admin' | 'auditor' | 'auditee',
-        department: demoUser.department,
-        lastLogin: new Date()
-      };
+    try {
+      const response = await authApi.login(email, password);
       
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('auth_token', 'demo-token-' + Date.now());
-      return true;
+      if (response.data.success) {
+        const { token, user: userData } = response.data;
+        
+        const user = {
+          id: userData.id.toString(),
+          name: userData.name,
+          email: userData.email,
+          role: userData.role as 'admin' | 'auditor' | 'auditee',
+          department: userData.department,
+          lastLogin: new Date()
+        };
+        
+        setUser(user);
+        localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('auth_token', token);
+        return true;
+      }
+      return false;
+    } catch (error: any) {
+      console.error('Login error:', error);
+      if (error.response?.status === 401) {
+        toast.error('Invalid credentials');
+      } else {
+        toast.error('Login failed. Please try again.');
+      }
+      return false;
     }
-    return false;
   };
 
   const logout = () => {

@@ -1,10 +1,25 @@
 <?php
+require_once __DIR__ . '/../vendor/autoload.php';
+
+// Load environment variables
+if (file_exists(__DIR__ . '/../.env')) {
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
+    $dotenv->load();
+}
+
 class Database {
-    private $host = "localhost";
-    private $db_name = "secaudit_pro";
-    private $username = "root";
-    private $password = "";
+    private $host;
+    private $db_name;
+    private $username;
+    private $password;
     public $conn;
+
+    public function __construct() {
+        $this->host = $_ENV['DB_HOST'] ?? 'localhost';
+        $this->db_name = $_ENV['DB_NAME'] ?? 'secaudit_pro';
+        $this->username = $_ENV['DB_USER'] ?? 'root';
+        $this->password = $_ENV['DB_PASS'] ?? '';
+    }
 
     public function getConnection() {
         $this->conn = null;
