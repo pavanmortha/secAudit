@@ -6,7 +6,7 @@ class WebSocketService {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
 
-  connect(url: string = 'ws://localhost:3001') {
+  connect(url: string = import.meta.env.VITE_WS_URL || 'ws://localhost:8080') {
     if (this.socket?.connected) {
       return this.socket;
     }
@@ -80,15 +80,37 @@ class WebSocketService {
 
   // Emit events
   joinRoom(room: string) {
-    this.socket?.emit('join', room);
+    this.socket?.emit('message', JSON.stringify({
+      type: 'join_room',
+      room: room
+    }));
   }
 
   leaveRoom(room: string) {
-    this.socket?.emit('leave', room);
+    this.socket?.emit('message', JSON.stringify({
+      type: 'leave_room',
+      room: room
+    }));
   }
 
   startScan(assetId: string) {
-    this.socket?.emit('scan:start', { assetId });
+    this.socket?.emit('message', JSON.stringify({
+      type: 'start_scan',
+      assetId: assetId
+    }));
+  }
+  
+  authenticate(token: string) {
+    this.socket?.emit('message', JSON.stringify({
+      type: 'authenticate',
+      token: token
+    }));
+  }
+  
+  ping() {
+    this.socket?.emit('message', JSON.stringify({
+      type: 'ping'
+    }));
   }
 
   // Remove listeners

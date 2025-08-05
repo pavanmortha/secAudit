@@ -1,9 +1,13 @@
 <?php
+require_once __DIR__ . '/../services/RealTimeService.php';
+
 class AssetController {
     private $db;
+    private $realTimeService;
 
     public function __construct($db) {
         $this->db = $db;
+        $this->realTimeService = new RealTimeService();
     }
 
     public function getAll() {
@@ -11,7 +15,7 @@ class AssetController {
             $query = "SELECT * FROM assets ORDER BY created_at DESC";
             $stmt = $this->db->prepare($query);
             $stmt->execute();
-            $assets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $assets = $stmt->fetchAll();
 
             // Convert timestamps to ISO format
             $assets = array_map(function($asset) {
@@ -35,7 +39,7 @@ class AssetController {
             $stmt->execute();
 
             if ($stmt->rowCount() > 0) {
-                $asset = $stmt->fetch(PDO::FETCH_ASSOC);
+                $asset = $stmt->fetch();
                 $asset['lastUpdated'] = date('c', strtotime($asset['last_updated']));
                 
                 http_response_code(200);
@@ -82,7 +86,13 @@ class AssetController {
                 $asset_id = $this->db->lastInsertId();
                 
                 // Log activity
-                $this->logActivity('create', 'asset', $asset_id, 'Created new asset: ' . $data['name']);
+                $this->realTimeService->logActivity(null, 'create', 'asset', $asset_id, 'Created new asset: ' . $data['name']);
+                
+                // Broadcast asset update
+                $this->realTimeService->broadcastAssetUpdate($asset_id, 'created');
+                
+                // Broadcast metrics update
+                $this->realTimeService->broadcastMetricsUpdate();
                 
                 // Get the created asset
                 $this->getById($asset_id);
@@ -124,7 +134,15 @@ class AssetController {
             
             if ($stmt->execute($params)) {
                 // Log activity
-                $this->logActivity('update', 'asset', $id, 'Updated asset');
+                $this->realTimeService->logActivity(null, 'update', 'asset', $id, 'Updated asset');
+                
+                // Broadcast asset update
+                $this->realTimeService->broadcastAssetUpdate($id, 'updated');
+                
+                // Broadcast metrics update if status changed
+                if (isset($data['status'])) {
+                    $this->realTimeService->broadcastMetricsUpdate();
+                }
                 
                 $this->getById($id);
             } else {
@@ -151,7 +169,7 @@ class AssetController {
                 return;
             }
             
-            $asset_name = $check_stmt->fetch(PDO::FETCH_ASSOC)['name'];
+            $asset_name = $check_stmt->fetch()['name'];
             
             $query = "DELETE FROM assets WHERE id = :id";
             $stmt = $this->db->prepare($query);
@@ -159,7 +177,13 @@ class AssetController {
             
             if ($stmt->execute()) {
                 // Log activity
-                $this->logActivity('delete', 'asset', $id, 'Deleted asset: ' . $asset_name);
+                $this->realTimeService->logActivity(null, 'delete', 'asset', $id, 'Deleted asset: ' . $asset_name);
+                
+                // Broadcast asset update
+                $this->realTimeService->broadcastAssetUpdate($id, 'deleted');
+                
+                // Broadcast metrics update
+                $this->realTimeService->broadcastMetricsUpdate();
                 
                 http_response_code(200);
                 echo json_encode(['success' => true, 'message' => 'Asset deleted successfully']);
@@ -187,40 +211,123 @@ class AssetController {
                 return;
             }
             
-            $asset_name = $check_stmt->fetch(PDO::FETCH_ASSOC)['name'];
+            $asset_name = $check_stmt->fetch()['name'];
+            
+            // Create scan session
+            $scan_query = "INSERT INTO scan_sessions (asset_id, status, progress, stage) 
+                           VALUES (:asset_id, 'running', 0, 'Initializing scan...')";
+            $scan_stmt = $this->db->prepare($scan_query);
+            $scan_stmt->bindParam(':asset_id', $id);
+            $scan_stmt->execute();
+            
+            $scan_id = $this->db->lastInsertId();
             
             // Log activity
-            $this->logActivity('scan', 'asset', $id, 'Started security scan for: ' . $asset_name);
+            $this->realTimeService->logActivity(null, 'scan', 'asset', $id, 'Started security scan for: ' . $asset_name);
+            
+            // Start background scan simulation
+            $this->simulateScan($id, $scan_id);
             
             // In a real implementation, this would trigger actual scanning
             http_response_code(200);
             echo json_encode([
                 'success' => true, 
                 'message' => 'Security scan started for asset: ' . $asset_name,
-                'scanId' => uniqid('scan_')
+                'scanId' => $scan_id
             ]);
         } catch (Exception $e) {
             http_response_code(500);
             echo json_encode(['error' => 'Failed to start scan: ' . $e->getMessage()]);
         }
     }
-
-    private function logActivity($action, $entity_type, $entity_id, $details) {
-        try {
-            $query = "INSERT INTO activity_logs (action, entity_type, entity_id, details, ip_address, user_agent) 
-                      VALUES (:action, :entity_type, :entity_id, :details, :ip_address, :user_agent)";
+    
+    private function simulateScan($assetId, $scanId) {
+        // This would be replaced with actual scanning logic in production
+        // For now, we'll simulate the scan process
+        
+        $stages = [
+            'Initializing scan...',
+            'Port scanning...',
+            'Service detection...',
+            'Vulnerability assessment...',
+            'Generating report...',
+            'Scan completed'
+        ];
+        
+        // In a real implementation, this would be handled by a background job queue
+        // For demo purposes, we'll just update the scan session
+        register_shutdown_function(function() use ($assetId, $scanId, $stages) {
+            // This simulates a background process
+            ignore_user_abort(true);
+            set_time_limit(0);
             
+            for ($progress = 0; $progress <= 100; $progress += rand(10, 20)) {
+                if ($progress > 100) $progress = 100;
+                
+                $stageIndex = min(floor(($progress / 100) * (count($stages) - 1)), count($stages) - 1);
+                $stage = $stages[$stageIndex];
+                $findings = floor($progress / 15);
+                
+                // Update scan session
+                $query = "UPDATE scan_sessions SET progress = :progress, stage = :stage, findings_count = :findings 
+                          WHERE id = :scan_id";
+                $stmt = $this->db->prepare($query);
+                $stmt->bindParam(':progress', $progress);
+                $stmt->bindParam(':stage', $stage);
+                $stmt->bindParam(':findings', $findings);
+                $stmt->bindParam(':scan_id', $scanId);
+                $stmt->execute();
+                
+                if ($progress >= 100) {
+                    // Mark scan as completed
+                    $query = "UPDATE scan_sessions SET status = 'completed', completed_at = NOW() 
+                              WHERE id = :scan_id";
+                    $stmt = $this->db->prepare($query);
+                    $stmt->bindParam(':scan_id', $scanId);
+                    $stmt->execute();
+                    break;
+                }
+                
+                sleep(3); // Simulate scan time
+            }
+        });
+    }
+
+    public function getScanProgress($id) {
+        try {
+            $query = "SELECT * FROM scan_sessions WHERE asset_id = :asset_id ORDER BY started_at DESC LIMIT 1";
             $stmt = $this->db->prepare($query);
-            $stmt->bindParam(':action', $action);
-            $stmt->bindParam(':entity_type', $entity_type);
-            $stmt->bindParam(':entity_id', $entity_id);
-            $stmt->bindParam(':details', $details);
-            $stmt->bindParam(':ip_address', $_SERVER['REMOTE_ADDR'] ?? null);
-            $stmt->bindParam(':user_agent', $_SERVER['HTTP_USER_AGENT'] ?? null);
+            $stmt->bindParam(':asset_id', $id);
             $stmt->execute();
+            
+            if ($stmt->rowCount() > 0) {
+                $scan = $stmt->fetch();
+                
+                http_response_code(200);
+                echo json_encode([
+                    'scanId' => $scan['id'],
+                    'assetId' => $scan['asset_id'],
+                    'isScanning' => $scan['status'] === 'running',
+                    'progress' => (int)$scan['progress'],
+                    'stage' => $scan['stage'],
+                    'findings' => (int)$scan['findings_count'],
+                    'status' => $scan['status'],
+                    'startedAt' => $scan['started_at'],
+                    'completedAt' => $scan['completed_at']
+                ]);
+            } else {
+                http_response_code(200);
+                echo json_encode([
+                    'assetId' => $id,
+                    'isScanning' => false,
+                    'progress' => 0,
+                    'stage' => '',
+                    'findings' => 0
+                ]);
+            }
         } catch (Exception $e) {
-            // Log activity errors silently to avoid breaking main functionality
-            error_log("Failed to log activity: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to get scan progress: ' . $e->getMessage()]);
         }
     }
 }

@@ -1,9 +1,13 @@
 <?php
+require_once __DIR__ . '/../services/RealTimeService.php';
+
 class DashboardController {
     private $db;
+    private $realTimeService;
 
     public function __construct($db) {
         $this->db = $db;
+        $this->realTimeService = new RealTimeService();
     }
 
     public function getMetrics() {
@@ -12,48 +16,48 @@ class DashboardController {
             $assets_query = "SELECT COUNT(*) as total FROM assets WHERE status = 'active'";
             $assets_stmt = $this->db->prepare($assets_query);
             $assets_stmt->execute();
-            $total_assets = $assets_stmt->fetch(PDO::FETCH_ASSOC)['total'];
+            $total_assets = $assets_stmt->fetch()['total'];
 
             // Get total audits
             $audits_query = "SELECT COUNT(*) as total FROM audits WHERE status IN ('scheduled', 'in_progress')";
             $audits_stmt = $this->db->prepare($audits_query);
             $audits_stmt->execute();
-            $total_audits = $audits_stmt->fetch(PDO::FETCH_ASSOC)['total'];
+            $total_audits = $audits_stmt->fetch()['total'];
 
             // Get pending vulnerabilities
             $vuln_query = "SELECT COUNT(*) as total FROM vulnerabilities WHERE status IN ('open', 'in_progress')";
             $vuln_stmt = $this->db->prepare($vuln_query);
             $vuln_stmt->execute();
-            $pending_vulnerabilities = $vuln_stmt->fetch(PDO::FETCH_ASSOC)['total'];
+            $pending_vulnerabilities = $vuln_stmt->fetch()['total'];
 
             // Get critical vulnerabilities
             $critical_query = "SELECT COUNT(*) as total FROM vulnerabilities WHERE severity = 'critical' AND status IN ('open', 'in_progress')";
             $critical_stmt = $this->db->prepare($critical_query);
             $critical_stmt->execute();
-            $critical_vulnerabilities = $critical_stmt->fetch(PDO::FETCH_ASSOC)['total'];
+            $critical_vulnerabilities = $critical_stmt->fetch()['total'];
 
             // Get high vulnerabilities
             $high_query = "SELECT COUNT(*) as total FROM vulnerabilities WHERE severity = 'high' AND status IN ('open', 'in_progress')";
             $high_stmt = $this->db->prepare($high_query);
             $high_stmt->execute();
-            $high_vulnerabilities = $high_stmt->fetch(PDO::FETCH_ASSOC)['total'];
+            $high_vulnerabilities = $high_stmt->fetch()['total'];
 
             // Get overdue tasks (vulnerabilities past due date)
             $overdue_query = "SELECT COUNT(*) as total FROM vulnerabilities WHERE due_date < CURDATE() AND status IN ('open', 'in_progress')";
             $overdue_stmt = $this->db->prepare($overdue_query);
             $overdue_stmt->execute();
-            $overdue_tasks = $overdue_stmt->fetch(PDO::FETCH_ASSOC)['total'];
+            $overdue_tasks = $overdue_stmt->fetch()['total'];
 
             // Calculate compliance score (simplified)
             $resolved_query = "SELECT COUNT(*) as resolved FROM vulnerabilities WHERE status = 'resolved'";
             $resolved_stmt = $this->db->prepare($resolved_query);
             $resolved_stmt->execute();
-            $resolved_vulns = $resolved_stmt->fetch(PDO::FETCH_ASSOC)['resolved'];
+            $resolved_vulns = $resolved_stmt->fetch()['resolved'];
 
             $total_vulns_query = "SELECT COUNT(*) as total FROM vulnerabilities";
             $total_vulns_stmt = $this->db->prepare($total_vulns_query);
             $total_vulns_stmt->execute();
-            $total_vulns = $total_vulns_stmt->fetch(PDO::FETCH_ASSOC)['total'];
+            $total_vulns = $total_vulns_stmt->fetch()['total'];
 
             $compliance_score = $total_vulns > 0 ? round(($resolved_vulns / $total_vulns) * 100) : 100;
 
@@ -61,7 +65,7 @@ class DashboardController {
             $audited_assets_query = "SELECT COUNT(DISTINCT asset_id) as audited FROM audit_assets";
             $audited_assets_stmt = $this->db->prepare($audited_assets_query);
             $audited_assets_stmt->execute();
-            $audited_assets = $audited_assets_stmt->fetch(PDO::FETCH_ASSOC)['audited'];
+            $audited_assets = $audited_assets_stmt->fetch()['audited'];
 
             $audit_coverage = $total_assets > 0 ? round(($audited_assets / $total_assets) * 100) : 0;
 
@@ -94,7 +98,7 @@ class DashboardController {
             
             $stmt = $this->db->prepare($query);
             $stmt->execute();
-            $activities = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $activities = $stmt->fetchAll();
 
             // Format activities for frontend
             $formatted_activities = array_map(function($activity) {
@@ -150,7 +154,7 @@ class DashboardController {
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(':date', $date);
             $stmt->execute();
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $result = $stmt->fetch();
             
             $data[] = [
                 'date' => $date,
@@ -169,8 +173,21 @@ class DashboardController {
         for ($i = 11; $i >= 0; $i--) {
             $date = date('Y-m-01', strtotime("-$i months"));
             
-            // Simplified compliance calculation
-            $score = rand(70, 90); // In real implementation, calculate based on actual data
+            // Calculate actual compliance score for the month
+            $query = "SELECT 
+                        COUNT(*) as total_vulns,
+                        SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved_vulns
+                      FROM vulnerabilities 
+                      WHERE DATE_FORMAT(discovered_date, '%Y-%m') <= :month";
+            
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(':month', date('Y-m', strtotime($date)));
+            $stmt->execute();
+            $result = $stmt->fetch();
+            
+            $total = $result['total_vulns'] ?? 0;
+            $resolved = $result['resolved_vulns'] ?? 0;
+            $score = $total > 0 ? round(($resolved / $total) * 100) : 100;
             
             $data[] = [
                 'date' => $date,
@@ -185,7 +202,7 @@ class DashboardController {
         $query = "SELECT type, COUNT(*) as count FROM assets GROUP BY type";
         $stmt = $this->db->prepare($query);
         $stmt->execute();
-        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $results = $stmt->fetchAll();
         
         $type_names = [
             'web_app' => 'Web Apps',
@@ -204,16 +221,29 @@ class DashboardController {
     }
 
     private function getAuditProgressData() {
-        $months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
         $data = [];
         
-        foreach ($months as $month) {
-            // In real implementation, calculate based on actual audit data
+        for ($i = 5; $i >= 0; $i--) {
+            $month = date('Y-m', strtotime("-$i months"));
+            $monthName = date('M', strtotime("-$i months"));
+            
+            $query = "SELECT 
+                        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+                        SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as inProgress,
+                        SUM(CASE WHEN status = 'scheduled' THEN 1 ELSE 0 END) as scheduled
+                      FROM audits 
+                      WHERE DATE_FORMAT(scheduled_date, '%Y-%m') = :month";
+            
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(':month', $month);
+            $stmt->execute();
+            $result = $stmt->fetch();
+            
             $data[] = [
-                'month' => $month,
-                'completed' => rand(2, 7),
-                'inProgress' => rand(1, 4),
-                'scheduled' => rand(1, 5)
+                'month' => $monthName,
+                'completed' => (int)($result['completed'] ?? 0),
+                'inProgress' => (int)($result['inProgress'] ?? 0),
+                'scheduled' => (int)($result['scheduled'] ?? 0)
             ];
         }
         

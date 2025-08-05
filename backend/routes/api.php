@@ -56,6 +56,9 @@ class Router {
                 $controller = new ReportController($this->db);
                 return $this->handleReportRoutes($controller, $method, $segments, $user);
             
+            case 'websocket':
+                return $this->handleWebSocketRoutes($method, $segments);
+            
             default:
                 http_response_code(404);
                 echo json_encode(['error' => 'Route not found']);
@@ -98,6 +101,9 @@ class Router {
         switch ($method) {
             case 'GET':
                 if (isset($segments[1])) {
+                    if ($segments[1] === 'scan' && isset($segments[2])) {
+                        return $controller->getScanProgress($segments[2]);
+                    }
                     return $controller->getById($segments[1]);
                 }
                 return $controller->getAll();
@@ -246,5 +252,25 @@ class Router {
         
         http_response_code(404);
         echo json_encode(['error' => 'Report route not found']);
+    }
+    
+    private function handleWebSocketRoutes($method, $segments) {
+        if ($method === 'POST' && isset($segments[1])) {
+            switch ($segments[1]) {
+                case 'webhook':
+                    // Handle webhook from WebSocket server
+                    $data = json_decode(file_get_contents("php://input"), true);
+                    http_response_code(200);
+                    echo json_encode(['success' => true]);
+                    break;
+                    
+                default:
+                    http_response_code(404);
+                    echo json_encode(['error' => 'WebSocket route not found']);
+            }
+        } else {
+            http_response_code(404);
+            echo json_encode(['error' => 'WebSocket route not found']);
+        }
     }
 }
