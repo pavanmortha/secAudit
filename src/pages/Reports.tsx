@@ -9,6 +9,10 @@ import {
   Eye,
   Share2
 } from 'lucide-react';
+import { Modal } from '../components/Common/Modal';
+import { ReportGenerator } from '../components/Reports/ReportGenerator';
+import { useQuery } from '@tanstack/react-query';
+import { reportsApi } from '../services/api';
 
 interface Report {
   id: string;
@@ -23,42 +27,14 @@ interface Report {
 }
 
 export const Reports: React.FC = () => {
-  const [reports] = useState<Report[]>([
-    {
-      id: '1',
-      title: 'Q1 2024 VAPT Assessment Report',
-      type: 'audit_summary',
-      auditId: '1',
-      generatedDate: new Date('2024-01-20'),
-      generatedBy: 'John Auditor',
-      status: 'final',
-      fileSize: '2.4 MB',
-      format: 'pdf'
-    },
-    {
-      id: '2',
-      title: 'Critical Vulnerabilities Summary',
-      type: 'vulnerability_report',
-      generatedDate: new Date('2024-01-18'),
-      generatedBy: 'Security Team',
-      status: 'approved',
-      fileSize: '1.8 MB',
-      format: 'pdf'
-    },
-    {
-      id: '3',
-      title: 'Monthly Compliance Dashboard',
-      type: 'compliance_report',
-      generatedDate: new Date('2024-01-15'),
-      generatedBy: 'Compliance Officer',
-      status: 'final',
-      fileSize: '3.2 MB',
-      format: 'pdf'
-    }
-  ]);
+  const { data: reports = [], isLoading, refetch } = useQuery({
+    queryKey: ['reports'],
+    queryFn: () => reportsApi.getAll().then(res => res.data),
+  });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
 
   const filteredReports = reports.filter(report => {
     const matchesSearch = report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -98,7 +74,10 @@ export const Reports: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-900">Audit Reports</h1>
           <p className="text-slate-600">Generate and manage security audit reports</p>
         </div>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors">
+        <button 
+          onClick={() => setShowGenerateModal(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+        >
           <Plus className="w-4 h-4" />
           <span>Generate Report</span>
         </button>
@@ -138,28 +117,40 @@ export const Reports: React.FC = () => {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <button className="bg-white border-2 border-dashed border-slate-300 rounded-xl p-6 hover:border-blue-400 hover:bg-blue-50 transition-colors">
+        <button 
+          onClick={() => setShowGenerateModal(true)}
+          className="bg-white border-2 border-dashed border-slate-300 rounded-xl p-6 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+        >
           <div className="text-center">
             <FileText className="w-8 h-8 text-slate-400 mx-auto mb-2" />
             <p className="text-sm font-medium text-slate-900">Audit Summary</p>
             <p className="text-xs text-slate-600">Generate comprehensive audit report</p>
           </div>
         </button>
-        <button className="bg-white border-2 border-dashed border-slate-300 rounded-xl p-6 hover:border-red-400 hover:bg-red-50 transition-colors">
+        <button 
+          onClick={() => setShowGenerateModal(true)}
+          className="bg-white border-2 border-dashed border-slate-300 rounded-xl p-6 hover:border-red-400 hover:bg-red-50 transition-colors"
+        >
           <div className="text-center">
             <FileText className="w-8 h-8 text-slate-400 mx-auto mb-2" />
             <p className="text-sm font-medium text-slate-900">Vulnerability Report</p>
             <p className="text-xs text-slate-600">Export vulnerability findings</p>
           </div>
         </button>
-        <button className="bg-white border-2 border-dashed border-slate-300 rounded-xl p-6 hover:border-green-400 hover:bg-green-50 transition-colors">
+        <button 
+          onClick={() => setShowGenerateModal(true)}
+          className="bg-white border-2 border-dashed border-slate-300 rounded-xl p-6 hover:border-green-400 hover:bg-green-50 transition-colors"
+        >
           <div className="text-center">
             <FileText className="w-8 h-8 text-slate-400 mx-auto mb-2" />
             <p className="text-sm font-medium text-slate-900">Compliance Report</p>
             <p className="text-xs text-slate-600">Generate compliance overview</p>
           </div>
         </button>
-        <button className="bg-white border-2 border-dashed border-slate-300 rounded-xl p-6 hover:border-purple-400 hover:bg-purple-50 transition-colors">
+        <button 
+          onClick={() => setShowGenerateModal(true)}
+          className="bg-white border-2 border-dashed border-slate-300 rounded-xl p-6 hover:border-purple-400 hover:bg-purple-50 transition-colors"
+        >
           <div className="text-center">
             <FileText className="w-8 h-8 text-slate-400 mx-auto mb-2" />
             <p className="text-sm font-medium text-slate-900">Executive Summary</p>
@@ -229,6 +220,21 @@ export const Reports: React.FC = () => {
           <p className="text-slate-600">No reports found matching your criteria</p>
         </div>
       )}
+
+      {/* Report Generator Modal */}
+      <Modal
+        isOpen={showGenerateModal}
+        onClose={() => setShowGenerateModal(false)}
+        title="Generate New Report"
+        size="lg"
+      >
+        <ReportGenerator
+          onReportGenerated={() => {
+            setShowGenerateModal(false);
+            refetch();
+          }}
+        />
+      </Modal>
     </div>
   );
 };

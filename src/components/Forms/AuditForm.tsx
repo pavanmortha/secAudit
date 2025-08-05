@@ -31,7 +31,8 @@ export const AuditForm: React.FC<AuditFormProps> = ({
       ...formData,
       scope: formData.scope.split(',').map(s => s.trim()).filter(s => s),
       scheduledDate: new Date(formData.scheduledDate),
-      assetIds: audit?.assetIds || []
+      assetIds: audit?.assetIds || [],
+      status: 'scheduled'
     };
     onSubmit(submitData);
   };

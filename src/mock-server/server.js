@@ -13,7 +13,10 @@ const io = socketIo(server, {
   }
 });
 
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true
+}));
 app.use(express.json());
 
 // Mock data
@@ -128,22 +131,8 @@ function simulateScan(socket, assetId) {
 }
 
 // REST API endpoints
-app.get('/api/dashboard/metrics', (req, res) => {
-  res.json(mockMetrics);
-});
-
-app.get('/api/dashboard/activity', (req, res) => {
-  res.json(mockActivities.slice(0, 10));
-});
-
-app.get('/api/dashboard/charts', (req, res) => {
-  res.json({
-    vulnerabilityTrend: generateTrendData(),
-    complianceScore: generateComplianceData(),
-    assetDistribution: generateAssetDistribution(),
-    auditProgress: generateAuditProgress()
-  });
-});
+// Note: These endpoints are now handled by the PHP backend
+// Keep WebSocket functionality for real-time updates
 
 function generateTrendData() {
   const data = [];
