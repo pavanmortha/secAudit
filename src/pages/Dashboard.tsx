@@ -7,19 +7,44 @@ import {
   CheckCircle,
   Clock,
   TrendingUp,
-  Shield
+  Shield,
+  FileText
 } from 'lucide-react';
 import { MetricCard } from '../components/Dashboard/MetricCard';
-import { VulnerabilityChart, ComplianceScoreChart } from '../components/Dashboard/ComplianceChart';
+import { 
+  VulnerabilityTrendChart, 
+  ComplianceScoreChart, 
+  AssetDistributionChart,
+  AuditProgressChart 
+} from '../components/Dashboard/RealTimeCharts';
 import { RecentActivity } from '../components/Dashboard/RecentActivity';
-import { mockComplianceMetrics, mockVulnerabilities, mockAudits } from '../data/mockData';
+import { VulnerabilityHeatmap } from '../components/Vulnerabilities/VulnerabilityHeatmap';
+import { SecurityAlerts } from '../components/Dashboard/SecurityAlerts';
+import { useRealTimeMetrics, useRealTimeVulnerabilities, useRealTimeAssets, useRealTimeAudits } from '../hooks/useRealTimeData';
 
 export const Dashboard: React.FC = () => {
-  const metrics = mockComplianceMetrics;
-  const recentVulnerabilities = mockVulnerabilities.slice(0, 5);
-  const upcomingAudits = mockAudits.filter(audit => 
-    audit.status === 'scheduled' && new Date(audit.scheduledDate) > new Date()
-  );
+  const { metrics, isLoading } = useRealTimeMetrics();
+  
+  // Initialize real-time hooks
+  useRealTimeVulnerabilities();
+  useRealTimeAssets();
+  useRealTimeAudits();
+
+  if (isLoading || !metrics) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-32 bg-slate-100 animate-pulse rounded-xl" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 h-80 bg-slate-100 animate-pulse rounded-xl" />
+          <div className="h-80 bg-slate-100 animate-pulse rounded-xl" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -62,103 +87,82 @@ export const Dashboard: React.FC = () => {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <VulnerabilityChart />
+          <VulnerabilityTrendChart />
         </div>
         <div>
           <ComplianceScoreChart />
         </div>
       </div>
 
+      {/* Additional Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <AssetDistributionChart />
+        <AuditProgressChart />
+      </div>
+
+      {/* Vulnerability Heatmap */}
+      <VulnerabilityHeatmap />
+
       {/* Recent Activity & Upcoming Audits */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
         <RecentActivity />
 
-        {/* Recent Vulnerabilities */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-900">Recent Vulnerabilities</h3>
-            <Bug className="w-5 h-5 text-slate-400" />
-          </div>
-          <div className="space-y-3">
-            {recentVulnerabilities.map((vuln) => (
-              <div key={vuln.id} className="flex items-center space-x-3 p-3 bg-slate-50 rounded-lg">
-                <div className={`w-3 h-3 rounded-full ${
-                  vuln.severity === 'critical' ? 'bg-red-500' :
-                  vuln.severity === 'high' ? 'bg-orange-500' :
-                  vuln.severity === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
-                }`}></div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate">{vuln.title}</p>
-                  <p className="text-xs text-slate-600">CVSS: {vuln.cvssScore}</p>
-                </div>
-                <div className={`px-2 py-1 text-xs rounded-full ${
-                  vuln.status === 'open' ? 'bg-red-100 text-red-800' :
-                  vuln.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-green-100 text-green-800'
-                }`}>
-                  {vuln.status.replace('_', ' ')}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
+        {/* Security Alerts */}
+        <SecurityAlerts />
       </div>
 
-      {/* Upcoming Audits */}
+      {/* Additional Dashboard Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Compliance Overview */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-900">Upcoming Audits</h3>
-            <Calendar className="w-5 h-5 text-slate-400" />
-          </div>
-          <div className="space-y-3">
-            {upcomingAudits.map((audit) => (
-              <div key={audit.id} className="flex items-center space-x-3 p-3 bg-slate-50 rounded-lg">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-blue-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate">{audit.title}</p>
-                  <p className="text-xs text-slate-600">
-                    {new Date(audit.scheduledDate).toLocaleDateString()} • {audit.type.toUpperCase()}
-                  </p>
-                </div>
-                <div className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                  {audit.status}
-                </div>
-              </div>
-            ))}
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Compliance Overview</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-green-600">{metrics.auditCoverage}%</p>
+              <p className="text-sm text-slate-600">Audit Coverage</p>
+            </div>
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <TrendingUp className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-blue-600">{metrics.complianceScore}%</p>
+              <p className="text-sm text-slate-600">Compliance Score</p>
+            </div>
+            <div className="text-center p-4 bg-orange-50 rounded-lg">
+              <Clock className="w-8 h-8 text-orange-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-orange-600">{metrics.overdueTasks}</p>
+              <p className="text-sm text-slate-600">Overdue Tasks</p>
+            </div>
+            <div className="text-center p-4 bg-red-50 rounded-lg">
+              <AlertTriangle className="w-8 h-8 text-red-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-red-600">{metrics.criticalVulnerabilities}</p>
+              <p className="text-sm text-slate-600">Critical Issues</p>
+            </div>
           </div>
         </div>
 
-      {/* Compliance Overview */}
+        {/* Quick Actions */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">Compliance Overview</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="text-center p-4 bg-green-50 rounded-lg">
-            <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-green-600">{metrics.auditCoverage}%</p>
-            <p className="text-sm text-slate-600">Audit Coverage</p>
-          </div>
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <TrendingUp className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-blue-600">{metrics.complianceScore}%</p>
-            <p className="text-sm text-slate-600">Compliance Score</p>
-          </div>
-          <div className="text-center p-4 bg-orange-50 rounded-lg">
-            <Clock className="w-8 h-8 text-orange-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-orange-600">{metrics.overdueTasks}</p>
-            <p className="text-sm text-slate-600">Overdue Tasks</p>
-          </div>
-          <div className="text-center p-4 bg-red-50 rounded-lg">
-            <AlertTriangle className="w-8 h-8 text-red-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-red-600">{metrics.criticalVulnerabilities}</p>
-            <p className="text-sm text-slate-600">Critical Issues</p>
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <button className="flex items-center space-x-2 p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+              <Calendar className="w-5 h-5 text-blue-600" />
+              <span className="text-sm font-medium text-blue-900">Schedule Audit</span>
+            </button>
+            <button className="flex items-center space-x-2 p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+              <Server className="w-5 h-5 text-green-600" />
+              <span className="text-sm font-medium text-green-900">Add Asset</span>
+            </button>
+            <button className="flex items-center space-x-2 p-3 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors">
+              <Bug className="w-5 h-5 text-orange-600" />
+              <span className="text-sm font-medium text-orange-900">Report Issue</span>
+            </button>
+            <button className="flex items-center space-x-2 p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+              <FileText className="w-5 h-5 text-purple-600" />
+              <span className="text-sm font-medium text-purple-900">Generate Report</span>
+            </button>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );

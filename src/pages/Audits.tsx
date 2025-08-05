@@ -12,12 +12,43 @@ import {
 } from 'lucide-react';
 import { Modal } from '../components/Common/Modal';
 import { AuditForm } from '../components/Forms/AuditForm';
-import { useAudits } from '../hooks/useAudits';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { auditsApi } from '../services/api';
 import { Audit } from '../types';
 import { format } from 'date-fns';
+import toast from 'react-hot-toast';
 
 export const Audits: React.FC = () => {
-  const { audits, loading, createAudit, updateAudit, deleteAudit } = useAudits();
+  const queryClient = useQueryClient();
+  
+  const { data: audits = [], isLoading: loading } = useQuery({
+    queryKey: ['audits'],
+    queryFn: () => auditsApi.getAll().then(res => res.data),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: auditsApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audits'] });
+      toast.success('Audit created successfully');
+    },
+    onError: () => {
+      toast.error('Failed to create audit');
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Audit> }) =>
+      auditsApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audits'] });
+      toast.success('Audit updated successfully');
+    },
+    onError: () => {
+      toast.error('Failed to update audit');
+    },
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [showModal, setShowModal] = useState(false);
@@ -62,7 +93,7 @@ export const Audits: React.FC = () => {
 
   const handleCreateAudit = async (auditData: Partial<Audit>) => {
     try {
-      await createAudit(auditData);
+      await createMutation.mutateAsync(auditData);
       setShowModal(false);
     } catch (error) {
       console.error('Failed to create audit:', error);
@@ -73,7 +104,10 @@ export const Audits: React.FC = () => {
     if (!editingAudit) return;
     
     try {
-      await updateAudit(editingAudit.id, auditData);
+      await updateMutation.mutateAsync({
+        id: editingAudit.id,
+        data: auditData,
+      });
       setEditingAudit(null);
       setShowModal(false);
     } catch (error) {

@@ -9,20 +9,65 @@ import {
   Trash2,
   Globe,
   Database,
-  Monitor
+  Monitor,
+  Play
 } from 'lucide-react';
 import { Modal } from '../components/Common/Modal';
 import { AssetForm } from '../components/Forms/AssetForm';
-import { useAssets } from '../hooks/useAssets';
+import { AssetScanProgress } from '../components/Assets/AssetScanProgress';
+import { useQuery } from '@tanstack/react-query';
+import { assetsApi } from '../services/api';
 import { Asset } from '../types';
+import toast from 'react-hot-toast';
 
 export const Assets: React.FC = () => {
-  const { assets, loading, createAsset, updateAsset, deleteAsset } = useAssets();
+  const queryClient = useQueryClient();
+  
+  const { data: assets = [], isLoading: loading } = useQuery({
+    queryKey: ['assets'],
+    queryFn: () => assetsApi.getAll().then(res => res.data),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: assetsApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
+      toast.success('Asset created successfully');
+    },
+    onError: () => {
+      toast.error('Failed to create asset');
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Asset> }) =>
+      assetsApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
+      toast.success('Asset updated successfully');
+    },
+    onError: () => {
+      toast.error('Failed to update asset');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: assetsApi.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
+      toast.success('Asset deleted successfully');
+    },
+    onError: () => {
+      toast.error('Failed to delete asset');
+    },
+  });
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [showModal, setShowModal] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [selectedAssetForScan, setSelectedAssetForScan] = useState<Asset | null>(null);
 
   const filteredAssets = assets.filter(asset => {
     const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -63,7 +108,7 @@ export const Assets: React.FC = () => {
 
   const handleCreateAsset = async (assetData: Partial<Asset>) => {
     try {
-      await createAsset(assetData);
+      await createMutation.mutateAsync(assetData);
       setShowModal(false);
     } catch (error) {
       console.error('Failed to create asset:', error);
@@ -74,7 +119,10 @@ export const Assets: React.FC = () => {
     if (!editingAsset) return;
     
     try {
-      await updateAsset(editingAsset.id, assetData);
+      await updateMutation.mutateAsync({
+        id: editingAsset.id,
+        data: assetData,
+      });
       setEditingAsset(null);
       setShowModal(false);
     } catch (error) {
@@ -84,7 +132,7 @@ export const Assets: React.FC = () => {
 
   const handleDeleteAsset = async (id: string) => {
     try {
-      await deleteAsset(id);
+      await deleteMutation.mutateAsync(id);
       setShowDeleteConfirm(null);
     } catch (error) {
       console.error('Failed to delete asset:', error);
@@ -200,12 +248,21 @@ export const Assets: React.FC = () => {
                   <button 
                     onClick={() => openEditModal(asset)}
                     className="p-2 hover:bg-slate-100 rounded-lg"
+                    title="Edit Asset"
                   >
                     <Edit3 className="w-4 h-4 text-slate-400" />
                   </button>
                   <button 
+                    onClick={() => setSelectedAssetForScan(asset)}
+                    className="p-2 hover:bg-blue-50 rounded-lg"
+                    title="Start Security Scan"
+                  >
+                    <Play className="w-4 h-4 text-blue-400" />
+                  </button>
+                  <button 
                     onClick={() => setShowDeleteConfirm(asset.id)}
                     className="p-2 hover:bg-red-50 rounded-lg"
+                    title="Delete Asset"
                   >
                     <Trash2 className="w-4 h-4 text-red-400" />
                   </button>
@@ -222,6 +279,21 @@ export const Assets: React.FC = () => {
           <p className="text-slate-600">No assets found matching your criteria</p>
         </div>
       )}
+
+      {/* Asset Scan Progress Modal */}
+      <Modal
+        isOpen={!!selectedAssetForScan}
+        onClose={() => setSelectedAssetForScan(null)}
+        title="Security Scan"
+        size="md"
+      >
+        {selectedAssetForScan && (
+          <AssetScanProgress
+            assetId={selectedAssetForScan.id}
+            assetName={selectedAssetForScan.name}
+          />
+        )}
+      </Modal>
 
       {/* Asset Form Modal */}
       <Modal
