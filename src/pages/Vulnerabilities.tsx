@@ -14,7 +14,6 @@ import {
 import { Modal } from '../components/Common/Modal';
 import { VulnerabilityForm } from '../components/Forms/VulnerabilityForm';
 import { VulnerabilityHeatmap } from '../components/Vulnerabilities/VulnerabilityHeatmap';
-import { useVulnerabilities } from '../hooks/useVulnerabilities';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { vulnerabilitiesApi } from '../services/api';
 import { Vulnerability } from '../types';

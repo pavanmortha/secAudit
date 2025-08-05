@@ -130,9 +130,223 @@ function simulateScan(socket, assetId) {
   }, 2000);
 }
 
-// REST API endpoints
-// Note: These endpoints are now handled by the PHP backend
-// Keep WebSocket functionality for real-time updates
+// REST API endpoints for mock data
+app.get('/api/dashboard/metrics', (req, res) => {
+  res.json(mockMetrics);
+});
+
+app.get('/api/dashboard/activity', (req, res) => {
+  res.json(mockActivities.slice(0, 10));
+});
+
+app.get('/api/dashboard/charts', (req, res) => {
+  res.json({
+    vulnerabilityTrend: generateTrendData(),
+    complianceScore: generateComplianceData(),
+    assetDistribution: generateAssetDistribution(),
+    auditProgress: generateAuditProgress()
+  });
+});
+
+app.get('/api/assets', (req, res) => {
+  const assets = [
+    {
+      id: '1',
+      name: 'Web Application Server',
+      type: 'server',
+      ip: '192.168.1.10',
+      os: 'Ubuntu 20.04',
+      version: '20.04.3',
+      criticality: 'critical',
+      owner: 'John Smith',
+      department: 'IT',
+      location: 'Data Center A',
+      status: 'active',
+      lastUpdated: new Date().toISOString()
+    },
+    {
+      id: '2',
+      name: 'Customer Portal',
+      type: 'web_app',
+      ip: '192.168.1.20',
+      os: 'CentOS 8',
+      version: '8.5',
+      criticality: 'high',
+      owner: 'Jane Doe',
+      department: 'Development',
+      location: 'Cloud AWS',
+      status: 'active',
+      lastUpdated: new Date().toISOString()
+    }
+  ];
+  res.json(assets);
+});
+
+app.get('/api/audits', (req, res) => {
+  const audits = [
+    {
+      id: '1',
+      title: 'Q1 2024 VAPT Assessment',
+      type: 'vapt',
+      scope: ['Web Application', 'Network Infrastructure'],
+      assetIds: ['1', '2'],
+      auditorId: 'aud1',
+      auditeeId: 'aue1',
+      status: 'in_progress',
+      scheduledDate: '2024-01-20',
+      frequency: 'quarterly',
+      documents: ['scope.pdf', 'checklist.pdf']
+    }
+  ];
+  res.json(audits);
+});
+
+app.get('/api/vulnerabilities', (req, res) => {
+  const vulnerabilities = [
+    {
+      id: '1',
+      auditId: '1',
+      assetId: '1',
+      title: 'SQL Injection in Login Form',
+      description: 'The login form is vulnerable to SQL injection attacks through the username parameter.',
+      severity: 'critical',
+      cvssScore: 9.1,
+      epssScore: 0.85,
+      cveId: 'CVE-2024-0001',
+      category: 'Injection',
+      status: 'open',
+      assignedTo: 'dev1',
+      dueDate: '2024-02-15',
+      discoveredDate: '2024-01-10'
+    }
+  ];
+  res.json(vulnerabilities);
+});
+
+app.get('/api/users', (req, res) => {
+  const users = [
+    {
+      id: '1',
+      name: 'Admin User',
+      email: 'admin@secaudit.com',
+      role: 'admin',
+      department: 'IT Security',
+      lastLogin: new Date().toISOString()
+    }
+  ];
+  res.json(users);
+});
+
+app.get('/api/reports', (req, res) => {
+  const reports = [
+    {
+      id: '1',
+      title: 'Weekly Security Report',
+      type: 'audit_summary',
+      generatedBy: 'Admin User',
+      status: 'final',
+      fileSize: '2.3 MB',
+      format: 'pdf',
+      generatedDate: new Date().toISOString()
+    }
+  ];
+  res.json(reports);
+});
+
+// POST endpoints for creating data
+app.post('/api/assets', (req, res) => {
+  const newAsset = { ...req.body, id: Date.now().toString(), lastUpdated: new Date().toISOString() };
+  res.status(201).json(newAsset);
+});
+
+app.post('/api/audits', (req, res) => {
+  const newAudit = { ...req.body, id: Date.now().toString() };
+  res.status(201).json(newAudit);
+});
+
+app.post('/api/vulnerabilities', (req, res) => {
+  const newVuln = { ...req.body, id: Date.now().toString(), discoveredDate: new Date().toISOString() };
+  res.status(201).json(newVuln);
+});
+
+app.post('/api/users', (req, res) => {
+  const newUser = { ...req.body, id: Date.now().toString() };
+  res.status(201).json(newUser);
+});
+
+app.post('/api/reports/generate', (req, res) => {
+  const newReport = {
+    id: Date.now().toString(),
+    title: `${req.body.type} Report`,
+    type: req.body.type,
+    generatedBy: 'System',
+    status: 'final',
+    fileSize: '1.5 MB',
+    format: req.body.params?.format || 'pdf',
+    generatedDate: new Date().toISOString()
+  };
+  res.status(201).json(newReport);
+});
+
+// PUT endpoints for updating data
+app.put('/api/assets/:id', (req, res) => {
+  const updatedAsset = { ...req.body, id: req.params.id, lastUpdated: new Date().toISOString() };
+  res.json(updatedAsset);
+});
+
+app.put('/api/audits/:id', (req, res) => {
+  const updatedAudit = { ...req.body, id: req.params.id };
+  res.json(updatedAudit);
+});
+
+app.put('/api/vulnerabilities/:id', (req, res) => {
+  const updatedVuln = { ...req.body, id: req.params.id };
+  res.json(updatedVuln);
+});
+
+app.put('/api/users/:id', (req, res) => {
+  const updatedUser = { ...req.body, id: req.params.id };
+  res.json(updatedUser);
+});
+
+// DELETE endpoints
+app.delete('/api/assets/:id', (req, res) => {
+  res.json({ success: true, message: 'Asset deleted successfully' });
+});
+
+app.delete('/api/audits/:id', (req, res) => {
+  res.json({ success: true, message: 'Audit deleted successfully' });
+});
+
+app.delete('/api/vulnerabilities/:id', (req, res) => {
+  res.json({ success: true, message: 'Vulnerability deleted successfully' });
+});
+
+app.delete('/api/users/:id', (req, res) => {
+  res.json({ success: true, message: 'User deleted successfully' });
+});
+
+// Authentication endpoints
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body;
+  
+  // Mock authentication
+  const users = {
+    'admin@secaudit.com': { id: '1', name: 'Admin User', role: 'admin', department: 'IT Security' },
+    'auditor@secaudit.com': { id: '2', name: 'John Auditor', role: 'auditor', department: 'Security' },
+    'auditee@secaudit.com': { id: '3', name: 'Jane Developer', role: 'auditee', department: 'Development' }
+  };
+  
+  if (users[email] && (password === 'admin123' || password === 'auditor123' || password === 'auditee123')) {
+    res.json({
+      success: true,
+      token: 'mock-jwt-token',
+      user: users[email]
+    });
+  } else {
+    res.status(401).json({ success: false, message: 'Invalid credentials' });
+  }
+});
 
 function generateTrendData() {
   const data = [];
@@ -186,4 +400,6 @@ function generateAuditProgress() {
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`Mock server running on port ${PORT}`);
+  console.log(`Frontend should connect to: http://localhost:${PORT}`);
+  console.log(`WebSocket available at: ws://localhost:${PORT}`);
 });

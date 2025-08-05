@@ -1,6 +1,6 @@
 import React from 'react';
 import { User, LogOut } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth.tsx';
+import { useAuth } from '../../hooks/useAuth';
 import { RealTimeIndicator } from '../Common/RealTimeIndicator';
 import { NotificationCenter } from '../Common/NotificationCenter';
 
