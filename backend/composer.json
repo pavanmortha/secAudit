@@ -4,7 +4,11 @@
     "type": "project",
     "require": {
         "php": ">=7.4",
-        "firebase/php-jwt": "^6.0"
+        "firebase/php-jwt": "^6.0",
+        "vlucas/phpdotenv": "^5.0",
+        "ratchet/pawl": "^0.4",
+        "react/socket": "^1.12",
+        "ratchet/rfc6455": "^0.3"
     },
     "autoload": {
         "psr-4": {

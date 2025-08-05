@@ -23,27 +23,49 @@ A comprehensive PHP backend for the SecAudit Pro cybersecurity audit dashboard.
 
 1. **Clone the repository**:
    ```bash
-   git clone <repository-url>
    cd backend
    ```
 
-2. **Install dependencies**:
+2. **Install PHP dependencies**:
    ```bash
    composer install
    ```
 
-3. **Configure database**:
-   - Create a MySQL database named `secaudit_pro`
-   - Update database credentials in `config/database.php`
-
-4. **Run setup**:
+3. **Configure environment**:
    ```bash
-   php setup.php
+   cp .env.example .env
+   # Edit .env with your database credentials
    ```
 
-5. **Configure web server**:
-   - Point document root to the backend directory
-   - Ensure `.htaccess` is enabled (Apache) or configure URL rewriting (Nginx)
+4. **Create database**:
+   ```sql
+   CREATE DATABASE secaudit_pro;
+   ```
+
+5. **Run installation**:
+   ```bash
+   php install.php
+   ```
+
+6. **Start development server**:
+   ```bash
+   php -S localhost:8000
+   ```
+
+## Development Setup
+
+For development, you can use the built-in PHP server:
+
+```bash
+# Start backend server
+php -S localhost:8000
+
+# In another terminal, start frontend
+cd ../
+npm run dev
+```
+
+The frontend will connect to the backend API at `http://localhost:8000/api`.
 
 ## API Endpoints
 

@@ -3,7 +3,9 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './hooks/useAuth';
 import { QueryProvider } from './providers/QueryProvider';
+import { ProtectedRoute } from './components/Auth/ProtectedRoute';
 import { Layout } from './components/Layout/Layout';
+import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Assets } from './pages/Assets';
 import { Audits } from './pages/Audits';
@@ -18,14 +20,27 @@ function App() {
       <AuthProvider>
         <Router>
           <Routes>
-            <Route path="/" element={<Layout />}>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }>
               <Route index element={<Dashboard />} />
               <Route path="assets" element={<Assets />} />
               <Route path="audits" element={<Audits />} />
               <Route path="vulnerabilities" element={<Vulnerabilities />} />
               <Route path="reports" element={<Reports />} />
-              <Route path="users" element={<Users />} />
-              <Route path="settings" element={<Settings />} />
+              <Route path="users" element={
+                <ProtectedRoute requiredRole="admin">
+                  <Users />
+                </ProtectedRoute>
+              } />
+              <Route path="settings" element={
+                <ProtectedRoute requiredRole="admin">
+                  <Settings />
+                </ProtectedRoute>
+              } />
             </Route>
           </Routes>
         </Router>

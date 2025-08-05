@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Asset, Audit, Vulnerability, User } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -30,6 +30,11 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export const authApi = {
+  login: (email: string, password: string) => api.post('/auth/login', { email, password }),
+  register: (userData: any) => api.post('/auth/register', userData),
+};
 
 // Assets API
 export const assetsApi = {
@@ -83,7 +88,9 @@ export const dashboardApi = {
 export const reportsApi = {
   generate: (type: string, params: any) => api.post('/reports/generate', { type, params }),
   getAll: () => api.get('/reports'),
+  getById: (id: string) => api.get(`/reports/${id}`),
   download: (id: string) => api.get(`/reports/${id}/download`, { responseType: 'blob' }),
+  delete: (id: string) => api.delete(`/reports/${id}`),
 };
 
 export default api;

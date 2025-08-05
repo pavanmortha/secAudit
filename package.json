@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:full": "concurrently \"npm run dev\" \"npm run mock-server\"",
+    "dev:full": "concurrently \"npm run dev\" \"npm run backend\" \"npm run websocket\"",
     "mock-server": "node src/mock-server/server.js",
+    "backend": "cd backend && php -S localhost:8000",
+    "websocket": "cd backend && php start-websocket.php",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
