@@ -14,7 +14,10 @@ import {
   Server,
   Database,
   Network,
-  Eye
+  Eye,
+  Users,
+  Zap,
+  Activity
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { CertInCompliance } from './CertInCompliance';
@@ -35,6 +38,8 @@ interface AuditCheck {
   lastRun?: Date;
   duration?: string;
   compliance: boolean;
+  automated: boolean;
+  certInRef: string;
 }
 
 const certInChecks: AuditCheck[] = [
@@ -49,7 +54,9 @@ const certInChecks: AuditCheck[] = [
     findings: 3,
     lastRun: new Date(Date.now() - 2 * 60 * 60 * 1000),
     duration: '45 minutes',
-    compliance: false
+    compliance: false,
+    automated: true,
+    certInRef: 'CERT-In-NS-001'
   },
   {
     id: 'access-control',
@@ -60,7 +67,9 @@ const certInChecks: AuditCheck[] = [
     status: 'running',
     progress: 65,
     findings: 1,
-    compliance: true
+    compliance: true,
+    automated: true,
+    certInRef: 'CERT-In-AC-002'
   },
   {
     id: 'data-protection',
@@ -71,7 +80,9 @@ const certInChecks: AuditCheck[] = [
     status: 'pending',
     progress: 0,
     findings: 0,
-    compliance: true
+    compliance: true,
+    automated: false,
+    certInRef: 'CERT-In-DP-003'
   },
   {
     id: 'incident-response',
@@ -84,7 +95,9 @@ const certInChecks: AuditCheck[] = [
     findings: 2,
     lastRun: new Date(Date.now() - 24 * 60 * 60 * 1000),
     duration: '30 minutes',
-    compliance: true
+    compliance: true,
+    automated: false,
+    certInRef: 'CERT-In-IR-004'
   },
   {
     id: 'vulnerability-mgmt',
@@ -97,7 +110,9 @@ const certInChecks: AuditCheck[] = [
     findings: 8,
     lastRun: new Date(Date.now() - 6 * 60 * 60 * 1000),
     duration: '2 hours',
-    compliance: false
+    compliance: false,
+    automated: true,
+    certInRef: 'CERT-In-VM-005'
   },
   {
     id: 'security-monitoring',
@@ -108,7 +123,37 @@ const certInChecks: AuditCheck[] = [
     status: 'running',
     progress: 30,
     findings: 0,
-    compliance: true
+    compliance: true,
+    automated: true,
+    certInRef: 'CERT-In-SM-006'
+  },
+  {
+    id: 'backup-recovery',
+    category: 'Business Continuity',
+    name: 'Backup & Disaster Recovery',
+    description: 'Backup procedures, disaster recovery plans, and business continuity assessment',
+    severity: 'high',
+    status: 'pending',
+    progress: 0,
+    findings: 0,
+    compliance: false,
+    automated: false,
+    certInRef: 'CERT-In-BC-007'
+  },
+  {
+    id: 'security-training',
+    category: 'Human Resources',
+    name: 'Security Awareness Training',
+    description: 'Employee security training, awareness programs, and phishing simulation',
+    severity: 'medium',
+    status: 'completed',
+    progress: 100,
+    findings: 5,
+    lastRun: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    duration: '1 week',
+    compliance: true,
+    automated: false,
+    certInRef: 'CERT-In-HR-008'
   }
 ];
 
@@ -116,6 +161,7 @@ export const AuditTools: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedCheck, setSelectedCheck] = useState<AuditCheck | null>(null);
   const [runningChecks, setRunningChecks] = useState<Set<string>>(new Set());
+  const [filterCategory, setFilterCategory] = useState<string>('all');
 
   const tabs = [
     { id: 'overview', name: 'Overview', icon: Shield },
@@ -125,6 +171,12 @@ export const AuditTools: React.FC = () => {
     { id: 'intelligence', name: 'Threat Intelligence', icon: Globe },
     { id: 'reports', name: 'Compliance Reports', icon: FileText }
   ];
+
+  const categories = ['all', ...Array.from(new Set(certInChecks.map(check => check.category)))];
+
+  const filteredChecks = filterCategory === 'all' 
+    ? certInChecks 
+    : certInChecks.filter(check => check.category === filterCategory);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -162,31 +214,62 @@ export const AuditTools: React.FC = () => {
       case 'Incident Response': return AlertTriangle;
       case 'Vulnerability Management': return Eye;
       case 'Security Monitoring': return Server;
+      case 'Business Continuity': return Shield;
+      case 'Human Resources': return Users;
       default: return Shield;
     }
   };
 
   const startAuditCheck = (checkId: string) => {
     setRunningChecks(prev => new Set(prev).add(checkId));
+    
     // Simulate audit check progress
-    setTimeout(() => {
-      setRunningChecks(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(checkId);
-        return newSet;
-      });
-    }, 5000);
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 15 + 5;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(interval);
+        setRunningChecks(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(checkId);
+          return newSet;
+        });
+      }
+    }, 1000);
   };
+
+  const runAllCriticalChecks = () => {
+    const criticalChecks = certInChecks.filter(check => 
+      check.severity === 'critical' && check.status === 'pending'
+    );
+    criticalChecks.forEach(check => startAuditCheck(check.id));
+  };
+
+  const complianceStats = {
+    total: certInChecks.length,
+    compliant: certInChecks.filter(check => check.compliance).length,
+    critical: certInChecks.filter(check => check.severity === 'critical' && !check.compliance).length,
+    running: certInChecks.filter(check => check.status === 'running').length + runningChecks.size,
+    completed: certInChecks.filter(check => check.status === 'completed').length
+  };
+
+  const overallCompliance = Math.round((complianceStats.compliant / complianceStats.total) * 100);
 
   const renderOverview = () => (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Total Checks</p>
-              <p className="text-2xl font-bold text-slate-900">{certInChecks.length}</p>
+              <p className="text-sm font-medium text-slate-600">Overall Compliance</p>
+              <p className={`text-2xl font-bold ${
+                overallCompliance >= 80 ? 'text-green-600' :
+                overallCompliance >= 60 ? 'text-yellow-600' : 'text-red-600'
+              }`}>
+                {overallCompliance}%
+              </p>
             </div>
             <Shield className="w-8 h-8 text-blue-600" />
           </div>
@@ -195,10 +278,18 @@ export const AuditTools: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between">
             <div>
+              <p className="text-sm font-medium text-slate-600">Total Checks</p>
+              <p className="text-2xl font-bold text-slate-900">{complianceStats.total}</p>
+            </div>
+            <Target className="w-8 h-8 text-slate-600" />
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
               <p className="text-sm font-medium text-slate-600">Compliant</p>
-              <p className="text-2xl font-bold text-green-600">
-                {certInChecks.filter(c => c.compliance).length}
-              </p>
+              <p className="text-2xl font-bold text-green-600">{complianceStats.compliant}</p>
             </div>
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
@@ -208,9 +299,7 @@ export const AuditTools: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Critical Issues</p>
-              <p className="text-2xl font-bold text-red-600">
-                {certInChecks.filter(c => c.severity === 'critical' && !c.compliance).length}
-              </p>
+              <p className="text-2xl font-bold text-red-600">{complianceStats.critical}</p>
             </div>
             <AlertTriangle className="w-8 h-8 text-red-600" />
           </div>
@@ -220,20 +309,46 @@ export const AuditTools: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Running</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {certInChecks.filter(c => c.status === 'running').length}
-              </p>
+              <p className="text-2xl font-bold text-blue-600">{complianceStats.running}</p>
             </div>
-            <Clock className="w-8 h-8 text-blue-600" />
+            <Activity className="w-8 h-8 text-blue-600" />
+          </div>
+        </div>
+      </div>
+
+      {/* Category Filter */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-slate-900">CERT-In Audit Checks</h3>
+          <div className="flex items-center space-x-3">
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {categories.map(category => (
+                <option key={category} value={category}>
+                  {category === 'all' ? 'All Categories' : category}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={runAllCriticalChecks}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+            >
+              <Zap className="w-4 h-4" />
+              <span>Run Critical Checks</span>
+            </button>
           </div>
         </div>
       </div>
 
       {/* Audit Checks Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {certInChecks.map((check, index) => {
+        {filteredChecks.map((check, index) => {
           const StatusIcon = getStatusIcon(check.status);
           const CategoryIcon = getCategoryIcon(check.category);
+          const isRunning = runningChecks.has(check.id) || check.status === 'running';
           
           return (
             <motion.div
@@ -251,17 +366,25 @@ export const AuditTools: React.FC = () => {
                   <div>
                     <h3 className="font-semibold text-slate-900">{check.name}</h3>
                     <p className="text-sm text-slate-600">{check.category}</p>
+                    <p className="text-xs text-slate-500 mt-1">{check.certInRef}</p>
                   </div>
                 </div>
-                <div className={`flex items-center space-x-2 px-3 py-1 rounded-full ${getStatusColor(check.status)}`}>
-                  <StatusIcon className="w-4 h-4" />
-                  <span className="text-sm font-medium capitalize">{check.status}</span>
+                <div className="flex items-center space-x-2">
+                  <div className={`flex items-center space-x-2 px-3 py-1 rounded-full ${getStatusColor(check.status)}`}>
+                    <StatusIcon className="w-4 h-4" />
+                    <span className="text-sm font-medium capitalize">{check.status}</span>
+                  </div>
+                  {check.automated && (
+                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                      Auto
+                    </span>
+                  )}
                 </div>
               </div>
 
               <p className="text-sm text-slate-600 mb-4">{check.description}</p>
 
-              {check.status === 'running' && (
+              {isRunning && (
                 <div className="mb-4">
                   <div className="flex items-center justify-between text-sm mb-2">
                     <span className="text-slate-600">Progress</span>
@@ -335,11 +458,14 @@ export const AuditTools: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <h3 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="flex items-center space-x-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
-            <Play className="w-6 h-6 text-blue-600" />
+          <button 
+            onClick={runAllCriticalChecks}
+            className="flex items-center space-x-3 p-4 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+          >
+            <Zap className="w-6 h-6 text-red-600" />
             <div className="text-left">
-              <p className="font-medium text-blue-900">Run All Critical Checks</p>
-              <p className="text-sm text-blue-700">Execute all critical security assessments</p>
+              <p className="font-medium text-red-900">Run All Critical Checks</p>
+              <p className="text-sm text-red-700">Execute all critical security assessments</p>
             </div>
           </button>
           
@@ -360,6 +486,94 @@ export const AuditTools: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Detailed Check Modal */}
+      {selectedCheck && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setSelectedCheck(null)}></div>
+            
+            <div className="inline-block w-full max-w-2xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">{selectedCheck.name}</h3>
+                <button
+                  onClick={() => setSelectedCheck(null)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-sm text-slate-600">Category:</span>
+                    <p className="font-medium text-slate-900">{selectedCheck.category}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-slate-600">CERT-In Reference:</span>
+                    <p className="font-medium text-slate-900">{selectedCheck.certInRef}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-slate-600">Severity:</span>
+                    <p className={`font-medium capitalize ${
+                      selectedCheck.severity === 'critical' ? 'text-red-600' :
+                      selectedCheck.severity === 'high' ? 'text-orange-600' :
+                      selectedCheck.severity === 'medium' ? 'text-yellow-600' : 'text-green-600'
+                    }`}>
+                      {selectedCheck.severity}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-slate-600">Automation:</span>
+                    <p className="font-medium text-slate-900">
+                      {selectedCheck.automated ? 'Automated' : 'Manual'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div>
+                  <span className="text-sm text-slate-600">Description:</span>
+                  <p className="text-slate-900 mt-1">{selectedCheck.description}</p>
+                </div>
+                
+                {selectedCheck.lastRun && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-sm text-slate-600">Last Run:</span>
+                      <p className="font-medium text-slate-900">{selectedCheck.lastRun.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-slate-600">Duration:</span>
+                      <p className="font-medium text-slate-900">{selectedCheck.duration}</p>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    onClick={() => setSelectedCheck(null)}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  >
+                    Close
+                  </button>
+                  {selectedCheck.status === 'pending' && (
+                    <button
+                      onClick={() => {
+                        startAuditCheck(selectedCheck.id);
+                        setSelectedCheck(null);
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                    >
+                      Run Check
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -376,7 +590,10 @@ export const AuditTools: React.FC = () => {
             <Download className="w-4 h-4" />
             <span>Export Report</span>
           </button>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors">
+          <button 
+            onClick={runAllCriticalChecks}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+          >
             <Play className="w-4 h-4" />
             <span>Run Assessment</span>
           </button>
@@ -390,7 +607,7 @@ export const AuditTools: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex items-center space-x-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'border-blue-600 text-blue-600 bg-blue-50'
                   : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'

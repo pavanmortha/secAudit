@@ -13,6 +13,7 @@ import { Vulnerabilities } from './pages/Vulnerabilities';
 import { Reports } from './pages/Reports';
 import { Users } from './pages/Users';
 import { Settings } from './pages/Settings';
+import { CertInAudit } from './pages/CertInAudit';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
               <Route path="assets" element={<Assets />} />
               <Route path="audits" element={<Audits />} />
               <Route path="vulnerabilities" element={<Vulnerabilities />} />
+              <Route path="certin-audit" element={<CertInAudit />} />
               <Route path="reports" element={<Reports />} />
               <Route path="users" element={
                 <ProtectedRoute requiredRole="admin">

@@ -9,7 +9,8 @@ import {
   BarChart3, 
   Users,
   Settings,
-  AlertTriangle
+  AlertTriangle,
+  Target
 } from 'lucide-react';
 
 const navigation = [
@@ -17,6 +18,7 @@ const navigation = [
   { name: 'Assets', href: '/assets', icon: Server },
   { name: 'Audits', href: '/audits', icon: Calendar },
   { name: 'Vulnerabilities', href: '/vulnerabilities', icon: Bug },
+  { name: 'CERT-In Tools', href: '/certin-audit', icon: Target },
   { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'Users', href: '/users', icon: Users },
   { name: 'Settings', href: '/settings', icon: Settings },

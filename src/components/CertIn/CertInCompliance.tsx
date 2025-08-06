@@ -109,6 +109,32 @@ const certInRequirements: ComplianceRequirement[] = [
     progress: 30
   },
   {
+    id: 'bc-001',
+    category: 'Business Continuity',
+    requirement: 'Disaster Recovery Plan',
+    description: 'Comprehensive disaster recovery and business continuity planning',
+    status: 'partial',
+    priority: 'high',
+    evidence: ['DR-Plan-v1.0.pdf', 'BCP-Procedures.docx'],
+    lastAssessed: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
+    nextDue: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    assignedTo: 'Business Continuity Team',
+    progress: 70
+  },
+  {
+    id: 'st-001',
+    category: 'Security Training',
+    requirement: 'Security Awareness Program',
+    description: 'Regular security awareness training and phishing simulation exercises',
+    status: 'compliant',
+    priority: 'medium',
+    evidence: ['Training-Records.xlsx', 'Phishing-Sim-Results.pdf', 'Certificates.pdf'],
+    lastAssessed: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+    nextDue: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+    assignedTo: 'HR & Security Team',
+    progress: 100
+  },
+  {
     id: 'ns-001',
     category: 'Network Security',
     requirement: 'Network Segmentation',

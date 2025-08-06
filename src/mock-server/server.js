@@ -348,6 +348,55 @@ app.post('/api/auth/login', (req, res) => {
   }
 });
 
+// CERT-In Audit endpoints
+app.get('/api/certin/checks', (req, res) => {
+  const checks = [
+    {
+      id: 'network-security',
+      category: 'Network Security',
+      name: 'Network Infrastructure Assessment',
+      status: 'completed',
+      progress: 100,
+      findings: 3,
+      compliance: false,
+      lastRun: new Date().toISOString()
+    },
+    {
+      id: 'access-control',
+      category: 'Access Control',
+      name: 'Identity & Access Management',
+      status: 'running',
+      progress: 65,
+      findings: 1,
+      compliance: true
+    }
+  ];
+  res.json(checks);
+});
+
+app.post('/api/certin/scan/:id', (req, res) => {
+  const scanId = req.params.id;
+  res.json({
+    success: true,
+    message: `Started CERT-In scan: ${scanId}`,
+    scanId: Date.now().toString()
+  });
+});
+
+app.get('/api/certin/compliance', (req, res) => {
+  const compliance = {
+    overallScore: 78,
+    requirements: [
+      { category: 'Incident Response', score: 85, status: 'compliant' },
+      { category: 'Security Monitoring', score: 90, status: 'compliant' },
+      { category: 'Vulnerability Management', score: 75, status: 'partial' },
+      { category: 'Access Control', score: 60, status: 'non-compliant' },
+      { category: 'Data Protection', score: 80, status: 'compliant' }
+    ]
+  };
+  res.json(compliance);
+});
+
 function generateTrendData() {
   const data = [];
   for (let i = 29; i >= 0; i--) {
